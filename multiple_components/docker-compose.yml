@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:v2.5
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:8000"
+    ports:
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - mynetwork
+
+  webapp:
+    container_name: webapp
+    build: .
+    image: app:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`localhost`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  db:
+    container_name: postgres
+    restart: always
+    user: postgres
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD: postgres # for testing purposes from outside the docker network
+      POSTGRES_DB: mytestdb
+    expose:
+      - 5432
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+
+networks:
+  mynetwork:
+    driver: bridge

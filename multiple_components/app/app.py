@@ -1,4 +1,5 @@
-import models
+import app.models as models
+from app.database import SessionLocal, engine
 
 from fastapi import FastAPI, Depends, Request, Form, status
 
@@ -7,8 +8,6 @@ from starlette.templating import Jinja2Templates
 
 from sqlalchemy.orm import Session
 
-
-from database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
